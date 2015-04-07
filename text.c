@@ -771,6 +771,93 @@ void text_debug(Text *txt) {
 	}
 }
 
+static void piece_dump(Piece *p, FILE *file) {
+	if (!p->prev || !p->next) {
+		fprintf(file, "\t\tpiece_%p [label=\"\",shape=%shouse,orientation=90,"
+			"style=filled,fillcolor=lightgrey]\n", p, p->prev ? "inv" : "");
+	} else {
+		fprintf(file, "\t\tpiece_%p [label=\"{{%p|%p|%d}|", p, p, p->data, p->len);
+		for (const char *c = p->data; c < p->data + p->len; c++) {
+			switch (*c) {
+			case '\r':
+				break;
+			case '\n':
+				fputs(" \\l", file);
+				break;
+			case '"':
+			case '|':
+			case '\\':
+			case '<':
+			case '>':
+			case '{':
+			case '}':
+				fprintf(file, "\\%c", *c);
+				break;
+			default:
+				fputc(*c, file);
+				break;
+			}
+		}
+		fprintf(file, "}\",shape=record%s]\n",
+			p->text->buf.data <= p->data && p->data < p->text->buf.data + p->len ?
+			",style=filled,fillcolor=lightgrey\n" : "");
+	}
+}
+
+bool text_dump(Text *txt, const char *filename) {
+	FILE *file = fopen(filename, "w");
+	if (!file)
+		return false;
+	fputs("digraph {\n\tnode[fontname=\"Courier\"]\n\n", file);
+
+	fprintf(file, "\tsubgraph {\n\t\trank=same; level_%p\n", txt);
+	for (Piece *p = &txt->begin; p; p = p->next)
+		piece_dump(p, file);
+	fputs("\t}\n\n", file);
+
+	for (Piece *p = &txt->begin; p; p = p->next) {
+		if (p->prev)
+			fprintf(file, "\tpiece_%p -> piece_%p\n", p, p->prev);
+		if (p->next)
+			fprintf(file, "\tpiece_%p -> piece_%p\n", p, p->next);
+	}
+
+	for (Action *a = txt->undo; a; a = a->next) {
+		for (Change *c = a->change; c; c = c->next) {
+			fprintf(file, "\n\tsubgraph {\n\t\trank=same; level_%p\n", c);
+			for (Piece *p = c->old.start; p && p != c->old.end->next; p = p->next)
+				piece_dump(p, file);
+			fputs("\t}\n\n", file);
+			for (Piece *p = c->old.start; p && p != c->old.end->next; p = p->next) {
+				bool first = p == c->old.start;
+				bool last = p == c->old.end;
+				fprintf(file, "\tpiece_%p%s -> piece_%p\n", p, first ? ":w" : "",  p->prev);
+				fprintf(file, "\tpiece_%p%s -> piece_%p\n", p, last ? ":e" : "",  p->next);
+			}
+		}
+	}
+
+	fputs("\n\tsubgraph {\n", file);
+	fprintf(file, "\t\tlevel_%p [shape=plaintext,label=\"%p\"]\n", txt, txt);
+	for (Action *a = txt->undo; a; a = a->next) {
+		for (Change *c = a->change; c; c = c->next) {
+			fprintf(file, "\t\tlevel_%p [shape=plaintext,label=\"%p\"]\n", c, c);
+		}
+	}
+	if (txt->undo)
+		fprintf(file, "\n\t\tlevel_%p -> ", txt);
+	for (Action *a = txt->undo; a; a = a->next) {
+		for (Change *c = a->change; c; c = c->next) {
+			fprintf(file, "level_%p", c);
+			fputs(c->next || a->next ? " -> " : " [style=invis]\n", file);
+		}
+	}
+	fputs("\t}\n", file);
+
+	fputs("}\n", file);
+	fclose(file);
+	return true;
+}
 /* A delete operation can either start/stop midway through a piece or at
  * a boundry. In the former case a new piece is created to represent the
  * remaining text before/after the modification point.

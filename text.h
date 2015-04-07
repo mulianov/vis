@@ -105,5 +105,6 @@ int text_search_range_backward(Text*, size_t pos, size_t len, Regex *r, size_t n
 
 // TMP
 void text_debug(Text*);
+bool text_dump(Text*, const char *filename);
 
 #endif

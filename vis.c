@@ -528,6 +528,8 @@ static bool cmd_write(Filerange*, enum CmdOpt, const char *argv[]);
  * associate the new name with the buffer. further :w commands
  * without arguments will write to the new filename */
 static bool cmd_saveas(Filerange*, enum CmdOpt, const char *argv[]);
+/* dump active window as graphviz file */
+static bool cmd_dump(Filerange*, enum CmdOpt, const char *argv[]);
 
 static void action_reset(Action *a);
 static void switchmode_to(Mode *new_mode);
@@ -1684,6 +1686,12 @@ static bool cmd_saveas(Filerange *range, enum CmdOpt opt, const char *argv[]) {
 		return true;
 	}
 	return false;
+}
+
+static bool cmd_dump(Filerange *range, enum CmdOpt opt, const char *argv[]) {
+	if (!argv[1])
+		return false;
+	return text_dump(vis->win->text->data, argv[1]);
 }
 
 static Filepos parse_pos(char **cmd) {

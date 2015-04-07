@@ -67,6 +67,7 @@ static Command cmds[] = {
 	{ { "wq",                      }, cmd_wq,         CMD_OPT_FORCE },
 	{ { "write", "w"               }, cmd_write,      CMD_OPT_FORCE },
 	{ { "xit",                     }, cmd_xit,        CMD_OPT_FORCE },
+	{ { "dump",                    }, cmd_dump,       CMD_OPT_NONE  },
 	{ /* array terminator */                                        },
 };
 
