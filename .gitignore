@@ -1,6 +1,8 @@
-config.h
 *.swo
 *.swp
 *.o
 nano
 vis
+build
+version
+
